@@ -1,0 +1,16 @@
+mixin varDisplay(varName, value="")
+    span(class=varName)= value
+
+mixin varSetter(varName, value="", type="text")
+    - var isInteger = Number.isInteger(parseInt(value))
+    label(for=varName) Set the value of #{varName}:
+    if isInteger
+        input(type="number", name=varName, value=value, id=varName + "_setter")
+    else
+        input(type=type, name=varName, value=value, id=varName + "_setter")
+    script.
+        document.getElementById("#{varName}_setter").onchange =
+            function(event) {
+                updateVariable("#{varName}", isInteger ? parseInt(event.target.value) : event.target.value)
+            }
+

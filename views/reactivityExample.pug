@@ -1,0 +1,10 @@
+extends layouts/main
+
+include macros/reactiveVars
+
+block mainbody
+    each v in reactiveVariables
+        +varSetter(v.varName, v.value)
+        p The variable #{v.varName} is set to "#{v.value}"
+            //- +varDisplay(v.varName, v.value)
+        br

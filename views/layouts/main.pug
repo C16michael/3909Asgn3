@@ -6,29 +6,64 @@ html(lang="en")
 
   body
     block mainbody
-      | Default body missing
+      // Example input elements
+      input(type="number", id="var1_setter")
+      input(type="number", id="var2_setter")
+      // Add more inputs as needed
 
     block footer
-    //-   p Made with Nunjuck
+      p#updateTime Update Time: Not set
+      p#immediateResponseTime Page Update Time: Not set
+      p#mongoUpdateTime MongoDB Update Time: Not set
+      p Made with Pug By Cristiano Michael 3147571
+
 
     script.
       let ws = new WebSocket("ws://localhost:3000/reactivity");
-      // Update express about variable changes
-        function updateVariable(varName, value) {
-            const data = {
-                varName: varName,
-                value: value
-            };
-            ws.send(JSON.stringify(data));
-        }
+      let startTime = 0;
+      let mangoUpdateTimeStart = 0;
 
-        // display updates coming through websocket
-        ws.onmessage = function(event) {
-            console.log(event.data);
-            let received = JSON.parse(event.data);
-            document.querySelectorAll("*").forEach(el => {
-                if (el.className.toString() === received.varName) {
-                    el.innerHTML = received.value;
-                }
-            })
+      // Update express about variable changes
+      function updateVariable(varName, value) {
+        if (ws.readyState === WebSocket.OPEN) {
+          const data = {
+            varName: varName,
+            value: value
+          };
+          startTime = Date.now(); // Capture the start time
+          mongoUpdateTimeStart = Date.now();
+          ws.send(JSON.stringify(data));
+        } else {
+          console.error("WebSocket is not open. Current state:", ws.readyState);
         }
+      }
+
+      // Event listener for DOM content loaded
+      document.addEventListener('DOMContentLoaded', function() {
+        // Set up event listeners for each input element
+        document.querySelectorAll('input[type="number"]').forEach(inputElement => {
+          inputElement.addEventListener('change', function(event) {
+            let varName = inputElement.id.replace('_setter', '');
+            updateVariable(varName, event.target.value);
+          });
+        });
+      });
+
+      // WebSocket message handler
+      ws.onmessage = function(event) {
+       let received = JSON.parse(event.data);
+
+        if (received.status === "updateComplete") {
+        // MongoDB update complete
+        let mongoUpdateTimeEnd = Date.now();
+        let mongoUpdateDuration = mongoUpdateTimeEnd - mongoUpdateTimeStart;
+        console.log(`MongoDB Update Time: ${mongoUpdateDuration} ms`);
+        document.getElementById('mongoUpdateTime').textContent = `MongoDB Update Time: ${mongoUpdateDuration} ms`;
+        } else {
+        // Immediate response
+        let immediateResponseEnd = Date.now();
+        let immediateResponseDuration = immediateResponseEnd - startTime;
+        console.log(`Immediate Response Time: ${immediateResponseDuration} ms`);
+        document.getElementById('immediateResponseTime').textContent = `Update happened within: ${immediateResponseDuration} ms`;
+        }
+      };

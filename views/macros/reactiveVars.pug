@@ -4,13 +4,10 @@ mixin varDisplay(varName, value="")
 mixin varSetter(varName, value="", type="text")
     - var isInteger = Number.isInteger(parseInt(value))
     label(for=varName) Set the value of #{varName}:
-    if isInteger
-        input(type="number", name=varName, value=value, id=varName + "_setter")
-    else
-        input(type=type, name=varName, value=value, id=varName + "_setter")
+    input(type=(isInteger ? "number" : type), name=varName, value=value, id=varName + "_setter", data-isinteger=isInteger)
     script.
-        document.getElementById("#{varName}_setter").onchange =
-            function(event) {
-                updateVariable("#{varName}", isInteger ? parseInt(event.target.value) : event.target.value)
-            }
+        document.getElementById("#{varName}_setter").onchange = function(event) {
+            var isInt = event.target.getAttribute('data-isinteger') === 'true';
+            updateVariable("#{varName}", isInt ? parseInt(event.target.value) : event.target.value);
+        }
 

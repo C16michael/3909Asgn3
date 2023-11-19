@@ -6,32 +6,26 @@ html(lang="en")
 
   body
     block mainbody
-      // Example input elements
-      input(type="number", id="var1_setter")
-      input(type="number", id="var2_setter")
-      // Add more inputs as needed
 
     block footer
+      // Paragraphs for displaying update times
       p#updateTime Update Time: Not set
       p#immediateResponseTime Page Update Time: Not set
       p#mongoUpdateTime MongoDB Update Time: Not set
       p Made with Pug By Cristiano Michael 3147571
 
-
     script.
+      // Establish WebSocket connection
       let ws = new WebSocket("ws://localhost:3000/reactivity");
       let startTime = 0;
-      let mangoUpdateTimeStart = 0;
+      let mongoUpdateTimeStart = 0;
 
-      // Update express about variable changes
+      // Function to send variable updates to the server
       function updateVariable(varName, value) {
         if (ws.readyState === WebSocket.OPEN) {
-          const data = {
-            varName: varName,
-            value: value
-          };
-          startTime = Date.now(); // Capture the start time
-          mongoUpdateTimeStart = Date.now();
+          const data = { varName, value };
+          startTime = Date.now(); // Start timing for immediate response
+          mongoUpdateTimeStart = Date.now(); // Start timing for MongoDB update
           ws.send(JSON.stringify(data));
         } else {
           console.error("WebSocket is not open. Current state:", ws.readyState);
@@ -40,30 +34,46 @@ html(lang="en")
 
       // Event listener for DOM content loaded
       document.addEventListener('DOMContentLoaded', function() {
-        // Set up event listeners for each input element
+        // Event listeners for input elements
         document.querySelectorAll('input[type="number"]').forEach(inputElement => {
           inputElement.addEventListener('change', function(event) {
             let varName = inputElement.id.replace('_setter', '');
-            updateVariable(varName, event.target.value);
+            let newValue = event.target.value;
+            // Update the display immediately upon input change
+            let immediateUpdate = Date.now();
+            document.getElementById(`${varName}_display`).textContent = newValue;
+            let immediateUpdateEnd = Date.now();
+            console.log(`Immediate update time for ${varName}: ${immediateUpdateEnd - immediateUpdate} ms`);
+            document.getElementById('updateTime').textContent = `Update happened within: ${immediateUpdateEnd - immediateUpdate} ms`;
+            // Send update to the server
+            updateVariable(varName, newValue);
           });
         });
       });
 
-      // WebSocket message handler
+     // WebSocket message handler
       ws.onmessage = function(event) {
-       let received = JSON.parse(event.data);
+        let received = JSON.parse(event.data);
 
         if (received.status === "updateComplete") {
-        // MongoDB update complete
-        let mongoUpdateTimeEnd = Date.now();
-        let mongoUpdateDuration = mongoUpdateTimeEnd - mongoUpdateTimeStart;
-        console.log(`MongoDB Update Time: ${mongoUpdateDuration} ms`);
-        document.getElementById('mongoUpdateTime').textContent = `MongoDB Update Time: ${mongoUpdateDuration} ms`;
+          // Handle MongoDB update completion
+          let mongoUpdateTimeEnd = Date.now();
+          let mongoUpdateDuration = mongoUpdateTimeEnd - mongoUpdateTimeStart;
+          console.log(`MongoDB Update Time: ${mongoUpdateDuration} ms`);
+          document.getElementById('mongoUpdateTime').textContent = `MongoDB Update Time: ${mongoUpdateDuration} ms`;
         } else {
-        // Immediate response
-        let immediateResponseEnd = Date.now();
-        let immediateResponseDuration = immediateResponseEnd - startTime;
-        console.log(`Immediate Response Time: ${immediateResponseDuration} ms`);
-        document.getElementById('immediateResponseTime').textContent = `Update happened within: ${immediateResponseDuration} ms`;
+          // Handle immediate response from the server
+          let immediateResponseEnd = Date.now();
+          let immediateResponseDuration = immediateResponseEnd - startTime;
+          console.log(`Immediate Response Time: ${immediateResponseDuration} ms`);
+          document.getElementById('immediateResponseTime').textContent = `Update happened within: ${immediateResponseDuration} ms`;
+
+          // Update the display for the variable
+          let varName = received.varName;
+          let newValue = received.value;
+          if (document.getElementById(`${varName}_display`)) {
+            document.getElementById(`${varName}_display`).textContent = newValue;
+          }
         }
       };
+

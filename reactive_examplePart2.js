@@ -1,4 +1,5 @@
 // Cristiano Michael 3147571
+//3.2 Part 3
 const express = require("express");
 const mongodb = require("mongodb");
 const expressWs = require("express-ws");
@@ -34,15 +35,12 @@ app.ws("/reactivity", async (ws, req) => {
     const update = JSON.parse(msg);
     console.log("Received update from browser: ", update);
 
-    // Send immediate response back to the client
-    ws.send(
-      JSON.stringify({
+    ws.send(JSON.stringify({
         status: "immediateResponse",
         varName: update.varName,
         value: update.value,
-      })
-    );
-
+      }));
+      
     // Update the MongoDB collection
     const queryDoc = { varName: update.varName };
     const updateDoc = { $set: { value: update.value } };
@@ -67,7 +65,7 @@ app.get("/", async (req, res) => {
   const allVariables = await cursor.toArray();
 
   // Render the page with the retrieved variables
-  res.render("reactivityExample", { reactiveVariables: allVariables });
+  res.render("reactivityExamplePart2", { reactiveVariables: allVariables });
 });
 
 // Start the server and listen on the specified port

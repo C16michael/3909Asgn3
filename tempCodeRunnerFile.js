@@ -1,1 +1,2 @@
-date);
+
+  ws.on("message", async (msg) => {

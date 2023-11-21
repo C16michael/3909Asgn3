@@ -1,0 +1,60 @@
+doctype html
+html(lang="en")
+  head
+    meta(charset="UTF-8")
+    title My DB API
+
+  body
+    block mainbody
+
+    block footer
+      // Paragraph for displaying MongoDB round trip update time
+      p#mongoUpdateTime MongoDB Update Time Round trip: Not set
+      p Made with Pug By Cristiano Michael 3147571
+
+    script.
+      // Establish WebSocket connection
+      let ws = new WebSocket("ws://localhost:3000/reactivity");
+      let startTime = 0;
+
+      // Function to send variable updates to the server
+      function updateVariable(varName, value) {
+        if (ws.readyState === WebSocket.OPEN) {
+          const data = { varName, value };
+          startTime = Date.now(); // Start timing for the round trip
+          ws.send(JSON.stringify(data));
+        } else {
+          console.error("WebSocket is not open. Current state:", ws.readyState);
+        }
+      }
+
+      // Event listener for DOM content loaded
+      document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('input[type="number"]').forEach(inputElement => {
+          inputElement.addEventListener('change', function(event) {
+            let varName = inputElement.id.replace('_setter', '');
+            let newValue = event.target.value;
+            updateVariable(varName, newValue); // Call updateVariable function
+          });
+        });
+      });
+
+      // WebSocket message handler
+      ws.onmessage = function(event) {
+        let received = JSON.parse(event.data);
+
+        if (received.status === "updateComplete") {
+          // Handle MongoDB update completion
+          let mongoUpdateTimeEnd = Date.now();
+          let mongoUpdateDuration = mongoUpdateTimeEnd - startTime;
+          console.log(`MongoDB Update Time: ${mongoUpdateDuration} ms`);
+          document.getElementById('mongoUpdateTime').textContent = `MongoDB Update Time: ${mongoUpdateDuration} ms`;
+
+          // Update the display for the variable
+          let varName = received.varName;
+          let newValue = received.value;
+          if (document.getElementById(`${varName}_display`)) {
+            document.getElementById(`${varName}_display`).textContent = newValue;
+          }
+        }
+      };

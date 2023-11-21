@@ -9,9 +9,8 @@ html(lang="en")
 
     block footer
       // Paragraphs for displaying update times
-      p#updateTime Update Time: Not set
       p#immediateResponseTime Page Update Time: Not set
-      p#mongoUpdateTime MongoDB Update Time: Not set
+      p#mongoUpdateTime MongoDB Update Time Round trip: Not set
       p Made with Pug By Cristiano Michael 3147571
 
     script.
@@ -21,35 +20,29 @@ html(lang="en")
       let mongoUpdateTimeStart = 0;
 
       // Function to send variable updates to the server
+     // Function to send variable updates to the server
       function updateVariable(varName, value) {
         if (ws.readyState === WebSocket.OPEN) {
           const data = { varName, value };
-          startTime = Date.now(); // Start timing for immediate response
-          mongoUpdateTimeStart = Date.now(); // Start timing for MongoDB update
+          startTime = Date.now(); // Start timing for the round trip
           ws.send(JSON.stringify(data));
         } else {
           console.error("WebSocket is not open. Current state:", ws.readyState);
         }
       }
 
+
       // Event listener for DOM content loaded
       document.addEventListener('DOMContentLoaded', function() {
-        // Event listeners for input elements
         document.querySelectorAll('input[type="number"]').forEach(inputElement => {
           inputElement.addEventListener('change', function(event) {
             let varName = inputElement.id.replace('_setter', '');
             let newValue = event.target.value;
-            // Update the display immediately upon input change
-            let immediateUpdate = Date.now();
-            document.getElementById(`${varName}_display`).textContent = newValue;
-            let immediateUpdateEnd = Date.now();
-            console.log(`Immediate update time for ${varName}: ${immediateUpdateEnd - immediateUpdate} ms`);
-            document.getElementById('updateTime').textContent = `Update happened within: ${immediateUpdateEnd - immediateUpdate} ms`;
-            // Send update to the server
-            updateVariable(varName, newValue);
+            updateVariable(varName, newValue); // Call updateVariable function
           });
         });
       });
+
 
      // WebSocket message handler
       ws.onmessage = function(event) {
@@ -58,15 +51,9 @@ html(lang="en")
         if (received.status === "updateComplete") {
           // Handle MongoDB update completion
           let mongoUpdateTimeEnd = Date.now();
-          let mongoUpdateDuration = mongoUpdateTimeEnd - mongoUpdateTimeStart;
+          let mongoUpdateDuration = mongoUpdateTimeEnd - startTime;
           console.log(`MongoDB Update Time: ${mongoUpdateDuration} ms`);
           document.getElementById('mongoUpdateTime').textContent = `MongoDB Update Time: ${mongoUpdateDuration} ms`;
-        } else {
-          // Handle immediate response from the server
-          let immediateResponseEnd = Date.now();
-          let immediateResponseDuration = immediateResponseEnd - startTime;
-          console.log(`Immediate Response Time: ${immediateResponseDuration} ms`);
-          document.getElementById('immediateResponseTime').textContent = `Update happened within: ${immediateResponseDuration} ms`;
 
           // Update the display for the variable
           let varName = received.varName;
@@ -74,6 +61,12 @@ html(lang="en")
           if (document.getElementById(`${varName}_display`)) {
             document.getElementById(`${varName}_display`).textContent = newValue;
           }
+        } else if (received.status === "immediateResponse") {
+          // Handle immediate response from the server
+          let immediateResponseEnd = Date.now();
+          let immediateResponseDuration = immediateResponseEnd - startTime;
+          console.log(`Immediate Response Time: ${immediateResponseDuration} ms`);
+          document.getElementById('immediateResponseTime').textContent = `Immediate Response Time: ${immediateResponseDuration} ms`;
         }
       };
 
